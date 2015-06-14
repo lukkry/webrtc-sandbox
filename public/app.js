@@ -1,35 +1,77 @@
 $(document).ready(function() {
   var ws = new WebSocket('ws://localhost:8080/ws');
-  window.ws = ws;
   var pc;
   var isCaller;
+  var currentId = generateId();
+  var peerConnections = {};
+  var currentStream;
+
+  $("#clients").append(currentId);
+
+  // get the local stream, show it in the local video element and send it
+  navigator.getUserMedia({ "video": true }, gotStream, error);
 
   ws.onmessage = function (evt) {
-    if (!pc) {
-      start();
+    var msg = JSON.parse(evt.data);
+    var pc = getPeerConnection(msg.from);
+
+    console.log(msg);
+
+    switch (msg.type) {
+      case "peer.connected":
+        createOffer(msg.from, pc);
+        $("#clients").append(msg.from);
+        break;
+      case "icecandidate":
+        pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        break;
+      case "sdp.offer":
+        pc.setRemoteDescription(new RTCSessionDescription(msg.sdp), function () {
+          console.log('Setting remote description by offer');
+          pc.createAnswer(function (sdp) {
+            pc.setLocalDescription(sdp);
+            ws.send(JSON.stringify({ type: "sdp.answer", from: currentId, to: msg.id, sdp: sdp }));
+          });
+        });
+        break;
+      case 'sdp.answer':
+        pc.setRemoteDescription(new RTCSessionDescription(msg.sdp), function () {
+          console.log('Setting remote description by answer');
+        }, function (e) {
+          console.error(e);
+        });
+        break;
     }
 
-    var signal = JSON.parse(evt.data);
-
-    if (signal.sdp) {
-      pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
-    } else {
-      pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-    }
   };
 
-  // run start(true) to initiate a call
-  function start() {
-    pc = new RTCPeerConnection();
+  function createOffer(id, pc) {
+    pc.createOffer(function (sdp) {
+      pc.setLocalDescription(sdp);
+      console.log('Creating an offer for', id);
 
-    // send any ice candidates to the other peer
+      ws.send(JSON.stringify({ type: "sdp.offer", from: currentId, to: id, sdp: sdp }));
+    });
+  }
+
+  function getPeerConnection(id) {
+    if (peerConnections[id]) {
+      return peerConnections[id];
+    }
+
+    console.log('Creating a new peer connection for', id);
+
+    var pc = new RTCPeerConnection();
+    peerConnections[id] = pc;
+
+    pc.addStream(currentStream);
+
     pc.onicecandidate = function (evt) {
       if (evt.candidate) {
-        ws.send(JSON.stringify({ "candidate": evt.candidate }));
+        ws.send(JSON.stringify({ type: "icecandidate", from: currentId, to: id, candidate: evt.candidate }));
       }
     };
 
-    // once remote stream arrives, show it in the remote video element
     pc.onaddstream = function (evt) {
       var video = document.createElement('video');
       video.src = URL.createObjectURL(evt.stream);
@@ -40,32 +82,21 @@ $(document).ready(function() {
       $("#remote-videos").append(video);
     };
 
-    // get the local stream, show it in the local video element and send it
-    navigator.getUserMedia({ "video": true }, gotStream, error);
+    return pc;
   }
 
   function gotStream(stream) {
     $("#local-video")[0].src = URL.createObjectURL(stream);
-    pc.addStream(stream);
+    currentStream = stream;
 
-    if (isCaller) {
-      pc.createOffer(gotDescription);
-    } else {
-      pc.createAnswer(gotDescription);
-    }
+    ws.send(JSON.stringify({ type: "peer.connected", from: currentId }));
   }
 
   function error() {
     console.log("error");
   }
 
-  function gotDescription(desc) {
-    pc.setLocalDescription(desc);
-    ws.send(JSON.stringify({ "sdp": desc }));
+  function generateId() {
+    return '_' + Math.random().toString(36).substr(2, 9);
   }
-
-  $("#start_btn").click(function() {
-    isCaller = true;
-    start();
-  });
 });
