@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -15,7 +19,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-var connections map[*websocket.Conn]bool
+var connections map[string]*websocket.Conn
 
 func (h *WsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	conn, err := upgrader.Upgrade(res, req, nil)
@@ -24,34 +28,61 @@ func (h *WsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	connections[conn] = true
-	go handleConn(conn)
+	uuid := req.URL.Query().Get("uuid")
+
+	connections[uuid] = conn
+	go handleConn(conn, uuid)
 }
 
-func handleConn(conn *websocket.Conn) error {
+func uuid(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, generateUUID())
+}
+
+func handleConn(conn *websocket.Conn, uuid string) error {
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
 			return err
 		}
 
-		for c := range connections {
-			// Send message to all peers, but not to the sender
-			if c != conn {
-				c.WriteMessage(messageType, p)
+		var msg map[string]interface{}
+		if err := json.Unmarshal(p, &msg); err != nil {
+			panic(err)
+		}
+
+		to := strings.TrimSpace(msg["to"].(string))
+
+		if to == "*" {
+			for peerUUID, peerConn := range connections {
+				// Send message to all peers, but not to the sender
+				if uuid != peerUUID {
+					peerConn.WriteMessage(messageType, p)
+				}
 			}
+		} else {
+			connections[to].WriteMessage(messageType, p)
 		}
 	}
 }
 
+func generateUUID() string {
+	out, err := exec.Command("uuidgen").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(out)
+}
+
 func setup() {
-	connections = make(map[*websocket.Conn]bool)
+	connections = make(map[string]*websocket.Conn)
 }
 
 func main() {
 	setup()
 
 	http.Handle("/ws", &WsHandler{})
+	http.HandleFunc("/uuid", uuid)
 	http.Handle("/", http.FileServer(http.Dir("public")))
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
