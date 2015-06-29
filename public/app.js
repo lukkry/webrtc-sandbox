@@ -3,6 +3,7 @@ $(document).ready(function() {
   var isCaller;
   var currentUUID;
   var peerConnections = {};
+  window.pc = peerConnections;
   var currentStream;
   var ws;
 
@@ -65,15 +66,15 @@ function createOffer(id, pc) {
   });
 }
 
-function getPeerConnection(id) {
-  if (peerConnections[id]) {
-    return peerConnections[id];
+function getPeerConnection(uuid) {
+  if (peerConnections[uuid]) {
+    return peerConnections[uuid];
   }
 
-  console.log('Creating a new peer connection for', id);
+  console.log('Creating a new peer connection for', uuid);
 
   var pc = new RTCPeerConnection();
-  peerConnections[id] = pc;
+  peerConnections[uuid] = pc;
 
   pc.addStream(currentStream);
 
@@ -82,7 +83,7 @@ function getPeerConnection(id) {
       ws.send(JSON.stringify({
         type: "icecandidate",
         from: currentUUID,
-        to: id,
+        to: uuid,
         candidate: evt.candidate
       }));
     }
@@ -95,7 +96,10 @@ function getPeerConnection(id) {
     video.autoPlay = true;
     video.play();
 
-    $("#remote-videos").append(video);
+    var htmlElem = $("<div class='col-md-4'></div>");
+    htmlElem.append(uuid + ":");
+    htmlElem.append(video);
+    $("#remote-videos").append(htmlElem);
   };
 
   return pc;

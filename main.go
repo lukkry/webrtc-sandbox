@@ -71,7 +71,7 @@ func generateUUID() string {
 		log.Fatal(err)
 	}
 
-	return string(out)
+	return strings.TrimSpace(string(out))
 }
 
 func setup() {
