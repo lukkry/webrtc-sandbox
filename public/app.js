@@ -28,7 +28,6 @@ ws.onmessage = function (evt) {
   switch (msg.type) {
     case "peer.connected":
       createOffer(msg.from, pc);
-      $("#clients").append(msg.from);
       break;
     case "icecandidate":
       pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
