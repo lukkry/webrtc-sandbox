@@ -64,7 +64,6 @@ func assertMsgNotReceived(t *testing.T, ws *websocket.Conn) {
 func TestMessageIsSendToAllPeers(t *testing.T) {
 	ts := httptest.NewServer(&WsHandler{})
 	ts.URL = makeWsProto(ts.URL)
-	setup()
 	defer ts.Close()
 
 	uuid1 := string(rand.Intn(10000))

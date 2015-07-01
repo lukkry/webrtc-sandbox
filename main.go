@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,8 +18,6 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-var connections map[string]*websocket.Conn
-
 func (h *WsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	conn, err := upgrader.Upgrade(res, req, nil)
 	if err != nil {
@@ -30,39 +27,13 @@ func (h *WsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	uuid := req.URL.Query().Get("uuid")
 
-	connections[uuid] = conn
-	go handleConn(conn, uuid)
+	peer := Peer{uuid: uuid, ws: conn}
+	roomName := "test"
+	addPeer(roomName, peer)
 }
 
 func uuid(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, generateUUID())
-}
-
-func handleConn(conn *websocket.Conn, uuid string) error {
-	for {
-		messageType, p, err := conn.ReadMessage()
-		if err != nil {
-			return err
-		}
-
-		var msg map[string]interface{}
-		if err := json.Unmarshal(p, &msg); err != nil {
-			panic(err)
-		}
-
-		to := strings.TrimSpace(msg["to"].(string))
-
-		if to == "*" {
-			for peerUUID, peerConn := range connections {
-				// Send message to all peers, but not to the sender
-				if uuid != peerUUID {
-					peerConn.WriteMessage(messageType, p)
-				}
-			}
-		} else {
-			connections[to].WriteMessage(messageType, p)
-		}
-	}
 }
 
 func generateUUID() string {
@@ -74,13 +45,7 @@ func generateUUID() string {
 	return strings.TrimSpace(string(out))
 }
 
-func setup() {
-	connections = make(map[string]*websocket.Conn)
-}
-
 func main() {
-	setup()
-
 	http.Handle("/ws", &WsHandler{})
 	http.HandleFunc("/uuid", uuid)
 	http.Handle("/", http.FileServer(http.Dir("public")))

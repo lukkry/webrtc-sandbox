@@ -29,6 +29,8 @@ ws.onmessage = function (evt) {
     case "peer.connected":
       createOffer(msg.from, pc);
       break;
+    case "peer.disconnected":
+      break;
     case "icecandidate":
       pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
       break;
