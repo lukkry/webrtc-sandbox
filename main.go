@@ -28,8 +28,7 @@ func (h *WsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	uuid := req.URL.Query().Get("uuid")
 
 	peer := Peer{uuid: uuid, ws: conn}
-	roomName := "test"
-	addPeer(roomName, peer)
+	hub.register <- peer
 }
 
 func uuid(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +45,8 @@ func generateUUID() string {
 }
 
 func main() {
+	RunHub()
+
 	http.Handle("/ws", &WsHandler{})
 	http.HandleFunc("/uuid", uuid)
 	http.Handle("/", http.FileServer(http.Dir("public")))

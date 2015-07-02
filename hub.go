@@ -7,7 +7,16 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var rooms map[string]map[string]Peer
+type Hub struct {
+	// Registered peers
+	rooms map[string]map[string]Peer
+
+	// Register a new peer
+	register chan Peer
+
+	// Unregister existing peer
+	unregister chan Peer
+}
 
 type Peer struct {
 	// UUID
@@ -17,18 +26,44 @@ type Peer struct {
 	ws *websocket.Conn
 }
 
-func addPeer(roomName string, peer Peer) {
-	if len(rooms) == 0 {
-		rooms = make(map[string]map[string]Peer)
-	}
+var hub = Hub{
+	rooms:      make(map[string]map[string]Peer),
+	register:   make(chan Peer),
+	unregister: make(chan Peer),
+}
 
-	if len(rooms[roomName]) == 0 {
+func RunHub() {
+	go func() {
+		for {
+			select {
+			case peer := <-hub.register:
+				registerPeer("test", peer)
+			case peer := <-hub.unregister:
+				unregisterPeer("test", peer)
+			}
+		}
+	}()
+}
+
+func registerPeer(roomName string, peer Peer) {
+
+	if len(hub.rooms[roomName]) == 0 {
 		peers := make(map[string]Peer)
-		rooms[roomName] = peers
+		hub.rooms[roomName] = peers
 	}
 
-	rooms[roomName][peer.uuid] = peer
+	hub.rooms[roomName][peer.uuid] = peer
 	go handlePeer(roomName, peer)
+}
+
+func unregisterPeer(roomName string, peer Peer) {
+	delete(hub.rooms[roomName], peer.uuid)
+
+	for _, oPeer := range hub.rooms[roomName] {
+		payload := map[string]string{"type": "peer.disconnected",
+			"from": "server", "to": "*", "disconnected": peer.uuid}
+		oPeer.ws.WriteJSON(payload)
+	}
 }
 
 func handlePeer(roomName string, peer Peer) {
@@ -46,14 +81,17 @@ func handlePeer(roomName string, peer Peer) {
 		to := strings.TrimSpace(msg["to"].(string))
 
 		if to == "*" {
-			for _, oPeer := range rooms[roomName] {
+			for _, oPeer := range hub.rooms[roomName] {
 				// Send message to all peers, but not to the sender
 				if peer.uuid != oPeer.uuid {
 					oPeer.ws.WriteMessage(messageType, p)
 				}
 			}
 		} else {
-			rooms[roomName][to].ws.WriteMessage(messageType, p)
+			hub.rooms[roomName][to].ws.WriteMessage(messageType, p)
 		}
 	}
+
+	hub.unregister <- peer
+	peer.ws.Close()
 }

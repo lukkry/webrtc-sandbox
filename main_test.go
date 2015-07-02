@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"math/rand"
+	"strconv"
 	"strings"
 
 	"net/http/httptest"
@@ -44,7 +45,7 @@ func assertMsgReceived(t *testing.T, ws *websocket.Conn, msg []byte) {
 	if err != nil {
 		t.Fatalf("ReadMessage: %v", err)
 	}
-	if string(p) != string(msg) {
+	if strings.TrimSpace(string(p)) != string(msg) {
 		t.Fatalf("message=%s, want %s", p, msg)
 	}
 }
@@ -61,32 +62,55 @@ func assertMsgNotReceived(t *testing.T, ws *websocket.Conn) {
 	}
 }
 
+func generatePeer(t *testing.T, ts *httptest.Server) Peer {
+	uuid := strconv.Itoa(rand.Intn(10000))
+	conn := createConnection(t, ts.URL, uuid)
+	return Peer{uuid: uuid, ws: conn}
+}
+
 func TestMessageIsSendToAllPeers(t *testing.T) {
+	RunHub()
+
 	ts := httptest.NewServer(&WsHandler{})
 	ts.URL = makeWsProto(ts.URL)
 	defer ts.Close()
 
-	uuid1 := string(rand.Intn(10000))
-	conn1 := createConnection(t, ts.URL, uuid1)
-	defer conn1.Close()
-
-	uuid2 := string(rand.Intn(10000))
-	conn2 := createConnection(t, ts.URL, uuid2)
-	defer conn2.Close()
-
-	uuid3 := string(rand.Intn(10000))
-	conn3 := createConnection(t, ts.URL, uuid3)
-	defer conn3.Close()
+	peer1 := generatePeer(t, ts)
+	peer2 := generatePeer(t, ts)
+	peer3 := generatePeer(t, ts)
 
 	broadcastMsg, _ := json.Marshal(map[string]string{"type": "peer.connected", "to": "*"})
-	sendMsg(t, conn1, broadcastMsg)
-	assertMsgNotReceived(t, conn1)
-	assertMsgReceived(t, conn2, broadcastMsg)
-	assertMsgReceived(t, conn3, broadcastMsg)
+	sendMsg(t, peer1.ws, broadcastMsg)
+	assertMsgNotReceived(t, peer1.ws)
+	assertMsgReceived(t, peer2.ws, broadcastMsg)
+	assertMsgReceived(t, peer3.ws, broadcastMsg)
 
-	directMsg, _ := json.Marshal(map[string]string{"type": "peer.connected", "to": uuid3})
-	sendMsg(t, conn1, directMsg)
-	assertMsgNotReceived(t, conn1)
-	assertMsgNotReceived(t, conn2)
-	assertMsgReceived(t, conn3, directMsg)
+	directMsg, _ := json.Marshal(map[string]string{"type": "peer.connected", "to": peer3.uuid})
+	sendMsg(t, peer1.ws, directMsg)
+	assertMsgNotReceived(t, peer1.ws)
+	assertMsgNotReceived(t, peer2.ws)
+	assertMsgReceived(t, peer3.ws, directMsg)
+}
+
+func TestPeerIsRemoved(t *testing.T) {
+	RunHub()
+
+	ts := httptest.NewServer(&WsHandler{})
+	ts.URL = makeWsProto(ts.URL)
+	defer ts.Close()
+
+	peer1 := generatePeer(t, ts)
+	peer2 := generatePeer(t, ts)
+	peer3 := generatePeer(t, ts)
+
+	if err := peer1.ws.WriteMessage(websocket.CloseMessage, []byte("")); err != nil {
+		t.Fatalf("WriteMessage: %v", err)
+	}
+
+	directMsg, _ := json.Marshal(map[string]string{"type": "peer.disconnected",
+		"from": "server", "to": "*", "disconnected": peer1.uuid})
+
+	assertMsgNotReceived(t, peer1.ws)
+	assertMsgReceived(t, peer2.ws, directMsg)
+	assertMsgReceived(t, peer3.ws, directMsg)
 }
