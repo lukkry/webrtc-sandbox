@@ -30,6 +30,7 @@ ws.onmessage = function (evt) {
       createOffer(msg.from, pc);
       break;
     case "peer.disconnected":
+	  $("#" + msg.disconnected).remove();
       break;
     case "icecandidate":
       pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
@@ -97,7 +98,7 @@ function getPeerConnection(uuid) {
     video.autoPlay = true;
     video.play();
 
-    var htmlElem = $("<div class='col-md-4'></div>");
+    var htmlElem = $("<div id='" + uuid + "' class='col-md-4'></div>");
     htmlElem.append(uuid + ":");
     htmlElem.append(video);
     $("#remote-videos").append(htmlElem);
