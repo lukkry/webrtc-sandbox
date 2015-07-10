@@ -12,7 +12,7 @@ $(document).ready(function() {
     async: false,
     success: function(data) {
       currentUUID = data;
-      ws = new WebSocket('ws://localhost:8080/ws?uuid=' + currentUUID);
+      ws = new WebSocket('ws://' + window.location.host + '/ws?uuid=' + currentUUID);
 
       // get the local stream, show it in the local video element and send it
       navigator.getUserMedia({ "video": true }, gotStream, error);
@@ -30,7 +30,7 @@ ws.onmessage = function (evt) {
       createOffer(msg.from, pc);
       break;
     case "peer.disconnected":
-	  $("#" + msg.disconnected).remove();
+      $("#" + msg.disconnected).remove();
       break;
     case "icecandidate":
       pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
