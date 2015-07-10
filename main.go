@@ -31,6 +31,10 @@ func (h *WsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	hub.register <- peer
 }
 
+func rooms(res http.ResponseWriter, req *http.Request) {
+	http.ServeFile(res, req, "views/room.html")
+}
+
 func uuid(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, generateUUID())
 }
@@ -47,9 +51,11 @@ func generateUUID() string {
 func main() {
 	RunHub()
 
-	http.Handle("/ws", &WsHandler{})
-	http.HandleFunc("/uuid", uuid)
 	http.Handle("/", http.FileServer(http.Dir("public")))
+	http.Handle("/ws", &WsHandler{})
+	http.HandleFunc("/rooms/", rooms)
+	http.HandleFunc("/uuid", uuid)
+
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())

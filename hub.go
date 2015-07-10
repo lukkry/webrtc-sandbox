@@ -46,7 +46,6 @@ func RunHub() {
 }
 
 func registerPeer(roomName string, peer Peer) {
-
 	if len(hub.rooms[roomName]) == 0 {
 		peers := make(map[string]Peer)
 		hub.rooms[roomName] = peers

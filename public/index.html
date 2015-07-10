@@ -1,24 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel="stylesheet" href="app.css">
-<link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/bower_components/bootstrap/dist/css/bootstrap.min.css">
 </head>
 <body>
 <div class="container">
-  <div class="row">
-    <div class="col-md-4">
-      You:
-      <video id="local-video" class="video" autoplay></video>
+  <form id="rooms" class="form-inline">
+    <div class="form-group">
+      <label for="room-name">Room name</label>
+      <input type="text" class="form-control" id="room-name" placeholder="Running club">
     </div>
-  </div>
-
-  <div id="remote-videos" class="row">
-  </div>
+    <button type="submit" class="btn btn-default">Start</button>
+  </form>
 </div>
 
-<script src="bower_components/jquery/dist/jquery.min.js"></script>
-<script src="bower_components/webrtc-adapter/adapter.js"></script>
-<script src="app.js"></script>
+<script src="/bower_components/jquery/dist/jquery.min.js"></script>
+<script src="/room.js"></script>
 </body>
 </html>

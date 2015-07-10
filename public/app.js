@@ -3,7 +3,6 @@ $(document).ready(function() {
   var isCaller;
   var currentUUID;
   var peerConnections = {};
-  window.pc = peerConnections;
   var currentStream;
   var ws;
 
