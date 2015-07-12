@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os/exec"
-	"strings"
 
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -40,29 +39,23 @@ func index(res http.ResponseWriter, req *http.Request) {
 	http.ServeFile(res, req, "views/index.html")
 }
 
-func uuid(w http.ResponseWriter, r *http.Request) {
+func getUUID(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, generateUUID())
 }
 
 func generateUUID() string {
-	out, err := exec.Command("uuidgen").Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return strings.TrimSpace(string(out))
+	return uuid.New()
 }
 
 func main() {
 	RunHub()
 
-	http.Handle("/ws", &WsHandler{})
-	http.HandleFunc("/uuid", uuid)
-	http.HandleFunc("/rooms/", rooms)
-
 	fs := http.FileServer(http.Dir("assets"))
 	http.Handle("/assets/", http.StripPrefix("/assets/", fs))
 
+	http.Handle("/ws", &WsHandler{})
+	http.HandleFunc("/uuid", getUUID)
+	http.HandleFunc("/rooms/", rooms)
 	http.HandleFunc("/", index)
 
 	err := http.ListenAndServe(":8080", nil)
