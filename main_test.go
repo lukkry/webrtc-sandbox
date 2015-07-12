@@ -19,8 +19,7 @@ func makeWsProto(s string) string {
 	return "ws" + strings.TrimPrefix(s, "http") + "/ws"
 }
 
-func createConnection(t *testing.T, url string, uuid string) *websocket.Conn {
-	url = url + "?uuid=" + uuid
+func createConnection(t *testing.T, url string) *websocket.Conn {
 	ws, _, err := dialer.Dial(url, nil)
 	if err != nil {
 		t.Fatalf("Dial: %v", err)
@@ -62,34 +61,38 @@ func assertMsgNotReceived(t *testing.T, ws *websocket.Conn) {
 	}
 }
 
-func generatePeer(t *testing.T, ts *httptest.Server) Peer {
+func generatePeer(t *testing.T, roomName string, ts *httptest.Server) Peer {
 	uuid := strconv.Itoa(rand.Intn(10000))
-	conn := createConnection(t, ts.URL, uuid)
+	url := ts.URL + "?room_name=" + roomName + "&uuid=" + uuid
+	conn := createConnection(t, url)
 	return Peer{uuid: uuid, ws: conn}
 }
 
-func TestMessageIsSendToAllPeers(t *testing.T) {
+func TestMessageIsSendToAllPeersInARoom(t *testing.T) {
 	RunHub()
 
 	ts := httptest.NewServer(&WsHandler{})
 	ts.URL = makeWsProto(ts.URL)
 	defer ts.Close()
 
-	peer1 := generatePeer(t, ts)
-	peer2 := generatePeer(t, ts)
-	peer3 := generatePeer(t, ts)
+	peer1 := generatePeer(t, "RoomA", ts)
+	peer2 := generatePeer(t, "RoomA", ts)
+	peer3 := generatePeer(t, "RoomA", ts)
+	peer4 := generatePeer(t, "RoomB", ts)
 
 	broadcastMsg, _ := json.Marshal(map[string]string{"type": "peer.connected", "to": "*"})
 	sendMsg(t, peer1.ws, broadcastMsg)
 	assertMsgNotReceived(t, peer1.ws)
 	assertMsgReceived(t, peer2.ws, broadcastMsg)
 	assertMsgReceived(t, peer3.ws, broadcastMsg)
+	assertMsgNotReceived(t, peer4.ws)
 
 	directMsg, _ := json.Marshal(map[string]string{"type": "peer.connected", "to": peer3.uuid})
 	sendMsg(t, peer1.ws, directMsg)
 	assertMsgNotReceived(t, peer1.ws)
 	assertMsgNotReceived(t, peer2.ws)
 	assertMsgReceived(t, peer3.ws, directMsg)
+	assertMsgNotReceived(t, peer4.ws)
 }
 
 func TestPeerIsRemoved(t *testing.T) {
@@ -99,9 +102,9 @@ func TestPeerIsRemoved(t *testing.T) {
 	ts.URL = makeWsProto(ts.URL)
 	defer ts.Close()
 
-	peer1 := generatePeer(t, ts)
-	peer2 := generatePeer(t, ts)
-	peer3 := generatePeer(t, ts)
+	peer1 := generatePeer(t, "RoomA", ts)
+	peer2 := generatePeer(t, "RoomA", ts)
+	peer3 := generatePeer(t, "RoomA", ts)
 
 	if err := peer1.ws.WriteMessage(websocket.CloseMessage, []byte("")); err != nil {
 		t.Fatalf("WriteMessage: %v", err)

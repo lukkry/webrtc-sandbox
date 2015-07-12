@@ -11,7 +11,9 @@ $(document).ready(function() {
     async: false,
     success: function(data) {
       currentUUID = data;
-      ws = new WebSocket('ws://' + window.location.host + '/ws?uuid=' + currentUUID);
+      var roomName = window.location.pathname.replace("/rooms/", "");
+      var url = "ws://" + window.location.host + "/ws?uuid=" + currentUUID + "&room_name=" + roomName;
+      ws = new WebSocket(url);
 
       // get the local stream, show it in the local video element and send it
       navigator.getUserMedia({ "video": true }, gotStream, error);

@@ -19,8 +19,8 @@ type Hub struct {
 }
 
 type Peer struct {
-	// UUID
-	uuid string
+	uuid     string
+	roomName string
 
 	// The websocket connection.
 	ws *websocket.Conn
@@ -37,28 +37,28 @@ func RunHub() {
 		for {
 			select {
 			case peer := <-hub.register:
-				registerPeer("test", peer)
+				registerPeer(peer)
 			case peer := <-hub.unregister:
-				unregisterPeer("test", peer)
+				unregisterPeer(peer)
 			}
 		}
 	}()
 }
 
-func registerPeer(roomName string, peer Peer) {
-	if len(hub.rooms[roomName]) == 0 {
+func registerPeer(peer Peer) {
+	if len(hub.rooms[peer.roomName]) == 0 {
 		peers := make(map[string]Peer)
-		hub.rooms[roomName] = peers
+		hub.rooms[peer.roomName] = peers
 	}
 
-	hub.rooms[roomName][peer.uuid] = peer
-	go handlePeer(roomName, peer)
+	hub.rooms[peer.roomName][peer.uuid] = peer
+	go handlePeer(peer.roomName, peer)
 }
 
-func unregisterPeer(roomName string, peer Peer) {
-	delete(hub.rooms[roomName], peer.uuid)
+func unregisterPeer(peer Peer) {
+	delete(hub.rooms[peer.roomName], peer.uuid)
 
-	for _, oPeer := range hub.rooms[roomName] {
+	for _, oPeer := range hub.rooms[peer.roomName] {
 		payload := map[string]string{"type": "peer.disconnected",
 			"from": "server", "to": "*", "disconnected": peer.uuid}
 		oPeer.ws.WriteJSON(payload)

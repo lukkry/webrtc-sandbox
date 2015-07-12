@@ -26,8 +26,9 @@ func (h *WsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	}
 
 	uuid := req.URL.Query().Get("uuid")
+	roomName := req.URL.Query().Get("room_name")
 
-	peer := Peer{uuid: uuid, ws: conn}
+	peer := Peer{uuid: uuid, roomName: roomName, ws: conn}
 	hub.register <- peer
 }
 
