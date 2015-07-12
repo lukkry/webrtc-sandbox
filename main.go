@@ -36,6 +36,10 @@ func rooms(res http.ResponseWriter, req *http.Request) {
 	http.ServeFile(res, req, "views/room.html")
 }
 
+func index(res http.ResponseWriter, req *http.Request) {
+	http.ServeFile(res, req, "views/index.html")
+}
+
 func uuid(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, generateUUID())
 }
@@ -52,10 +56,14 @@ func generateUUID() string {
 func main() {
 	RunHub()
 
-	http.Handle("/", http.FileServer(http.Dir("public")))
 	http.Handle("/ws", &WsHandler{})
-	http.HandleFunc("/rooms/", rooms)
 	http.HandleFunc("/uuid", uuid)
+	http.HandleFunc("/rooms/", rooms)
+
+	fs := http.FileServer(http.Dir("assets"))
+	http.Handle("/assets/", http.StripPrefix("/assets/", fs))
+
+	http.HandleFunc("/", index)
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
