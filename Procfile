@@ -1,1 +1,1 @@
-web: bin/webrtc-sandbox
+web: webrtc-sandbox

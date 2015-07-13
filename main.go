@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/gorilla/websocket"
@@ -50,6 +51,12 @@ func generateUUID() string {
 func main() {
 	RunHub()
 
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
+
 	fs := http.FileServer(http.Dir("assets"))
 	http.Handle("/assets/", http.StripPrefix("/assets/", fs))
 
@@ -58,7 +65,7 @@ func main() {
 	http.HandleFunc("/rooms/", rooms)
 	http.HandleFunc("/", index)
 
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
 	}
