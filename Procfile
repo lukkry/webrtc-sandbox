@@ -1,1 +1,1 @@
-web: webrtc-sandbox
+web: webrtc-sandbox -port=$PORT
