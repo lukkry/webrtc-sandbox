@@ -100,9 +100,9 @@ $(document).ready(function() {
       video.play();
 
       var htmlElem = $("<div id='" + uuid + "' class='col-md-4'></div>");
-      htmlElem.append(uuid + ":");
       htmlElem.append(video);
       $("#remote-videos").append(htmlElem);
+      setNickname(uuid);
     };
 
     return pc;
@@ -117,5 +117,15 @@ $(document).ready(function() {
 
   function error() {
     console.log("error");
+  }
+
+  function setNickname(uuid) {
+    $.ajax({
+      url: "http://www.whimsicalwordimal.com/api/name",
+      success: function(data) {
+        var span = $("<span>" + data.name + ":</span>");
+        $("#" + uuid).prepend(span);
+      }
+    });
   }
 });
