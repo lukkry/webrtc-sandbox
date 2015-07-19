@@ -16,7 +16,7 @@ $(document).ready(function() {
       ws = new WebSocket(url);
 
       // get the local stream, show it in the local video element and send it
-      navigator.getUserMedia({ "video": true }, gotStream, error);
+      navigator.getUserMedia({ "video": true, "audio": true }, gotStream, error);
     }
   });
 
