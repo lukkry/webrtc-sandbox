@@ -47,8 +47,10 @@ $(document).ready(function() {
               to: msg.from,
               sdp: sdp
             }));
-          });
-        });
+          },
+          function() { console.log("Answer create successfully") },
+          function() { console.log("Creating an answer failed") });
+        }, function() { console.log("Setting a remote description failed") });
         break;
       case 'sdp.answer':
         pc.setRemoteDescription(new RTCSessionDescription(msg.sdp), function () {
