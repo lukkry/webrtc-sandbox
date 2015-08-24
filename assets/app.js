@@ -68,7 +68,8 @@ $(document).ready(function() {
       console.log('Creating an offer for', id);
 
       ws.send(JSON.stringify({ type: "sdp.offer", from: currentUUID, to: id, sdp: sdp }));
-    });
+    },
+    function(){ console.log('Creating an offer failed') });
   }
 
   function getPeerConnection(uuid) {
