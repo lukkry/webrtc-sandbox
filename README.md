@@ -1,5 +1,5 @@
 ### WebRTC Sandbox
-Group conversations over WebRTC. See it in action on [webrtc.lukkry.info](http://www.webrtc.lukkry.info). Tested only in Chrome.
+Group conversations over WebRTC. See it in action on [webrtc.lukkry.info](http://www.webrtc.lukkry.info). It was tested only with Chrome, but should work on any browser which supports WebRTC.
 
 ### How to run it?
 1. Run a binary
